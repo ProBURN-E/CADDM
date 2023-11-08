@@ -24,39 +24,40 @@ Prior = None
 def get_prior(config):
     global Prior
     if Prior is None:
-        Prior = PriorBox(config['adm_det'])
+        Prior = PriorBox(config["adm_det"])
 
 
 def label_assign(bboxs, config, genuine=False):
-
     global Prior
     get_prior(config)
 
-    labels = torch.zeros(bboxs.shape[0],)
+    labels = torch.zeros(
+        bboxs.shape[0],
+    )
     defaults = Prior.forward().data  # information of priors
 
     if genuine:
-        return np.zeros(defaults.shape), np.zeros(defaults.shape[0], )
+        return np.zeros(defaults.shape), np.zeros(
+            defaults.shape[0],
+        )
 
     # anchor matching by iou.
 
     loc_t = torch.zeros(1, defaults.shape[0], 4)
     conf_t = torch.zeros(1, defaults.shape[0])
 
-    match(
-        0.5, torch.Tensor(bboxs), defaults,
-        [0.1, 0.2], labels, loc_t, conf_t, 0)
+    match(0.5, torch.Tensor(bboxs), defaults, [0.1, 0.2], labels, loc_t, conf_t, 0)
 
     loc_t, conf_t = np.array(loc_t)[0, ...], np.array(conf_t)[0, ...]
 
     if loc_t.max() > 10**5:
-        return None, 'prior bbox match err. bias is inf!'
+        return None, "prior bbox match err. bias is inf!"
 
     return loc_t, conf_t
 
 
 def prepare_train_input(targetRgb, sourceRgb, landmark, label, config, training=True):
-    '''Prepare model input images.
+    """Prepare model input images.
 
     Arguments:
     targetRgb: original images or fake images.
@@ -65,7 +66,7 @@ def prepare_train_input(targetRgb, sourceRgb, landmark, label, config, training=
     label: deepfake labels. genuine: 0, fake: 1.
     config: deepfake config dict.
     training: return processed image with aug or not.
-    '''
+    """
 
     rng = np.random
 
@@ -81,7 +82,7 @@ def prepare_train_input(targetRgb, sourceRgb, landmark, label, config, training=
     mfs_result, bbox = targetRgb, np.zeros((1, 4))
     # if input image is fake image. generate new fake image with mfs.
     if label:
-        blending_type = 'poisson' if rng.rand() >= 0.5 else 'alpha'
+        blending_type = "poisson" if rng.rand() >= 0.5 else "alpha"
 
         if rng.rand() >= 0.2:
             # global facial swap.
@@ -90,14 +91,24 @@ def prepare_train_input(targetRgb, sourceRgb, landmark, label, config, training=
             if rng.rand() > 0.5:
                 # fake to source global facial swap.
                 mfs_result, bbox = multi_scale_facial_swap(
-                    targetRgb, sourceRgb, landmark, config,
-                    sliding_win, blending_type, training
+                    targetRgb,
+                    sourceRgb,
+                    landmark,
+                    config,
+                    sliding_win,
+                    blending_type,
+                    training,
                 )
             elif rng.rand() >= 0.5:
                 # source to fake global facial swap.
                 mfs_result, bbox = multi_scale_facial_swap(
-                    sourceRgb, targetRgb, landmark, config,
-                    sliding_win, blending_type, training
+                    sourceRgb,
+                    targetRgb,
+                    landmark,
+                    config,
+                    sliding_win,
+                    blending_type,
+                    training,
                 )
             else:
                 mfs_result, bbox = targetRgb, np.array([[0, 0, 224, 224]])
@@ -107,21 +118,24 @@ def prepare_train_input(targetRgb, sourceRgb, landmark, label, config, training=
                 mfs_result = cropMfs[0]
         else:
             # parial facial swap.
-            prior_bbox = config['sliding_win']['prior_bbox']
+            prior_bbox = config["sliding_win"]["prior_bbox"]
             sliding_win = prior_bbox[np.random.choice(len(prior_bbox))]
             mfs_result, bbox = multi_scale_facial_swap(
-                sourceRgb, targetRgb, landmark, config,
-                sliding_win, blending_type, training
+                sourceRgb,
+                targetRgb,
+                landmark,
+                config,
+                sliding_win,
+                blending_type,
+                training,
             )
     else:
         # crop face with landmark.
-        cropMfs, landmark = get_align5p(
-            [mfs_result], landmark, rng, config, training
-        )
+        cropMfs, landmark = get_align5p([mfs_result], landmark, rng, config, training)
         mfs_result = cropMfs[0]
 
     if mfs_result is None:
-        return None, 'multi scale facial swap err.'
+        return None, "multi scale facial swap err."
 
     if training:  # and rng.rand() >= 0.5:
         mfs_result, bbox = image_h_mirror(mfs_result, bbox)
@@ -130,22 +144,27 @@ def prepare_train_input(targetRgb, sourceRgb, landmark, label, config, training=
     genuine = True if not label else False
 
     location_label, confidence_label = label_assign(
-        bbox.astype('float32') / config['crop_face']['output_size'],
-        config, genuine
+        bbox.astype("float32") / config["crop_face"]["output_size"], config, genuine
     )
 
-    return mfs_result, {'label': label, 'location_label': location_label,
-                        'confidence_label': confidence_label}
+    return mfs_result, {
+        "label": label,
+        "location_label": location_label,
+        "confidence_label": confidence_label,
+    }
 
 
 def prepare_test_input(img, ld, label, config):
-    config = config['crop_face']
+    config = config["crop_face"]
 
     img, ld = align_5p(
-        img, ld=ld,
-        face_width=config['face_width'], canvas_size=config['output_size'],
-        scale=config['scale']
+        img,
+        ld=ld,
+        face_width=config["face_width"],
+        canvas_size=config["output_size"],
+        scale=config["scale"],
     )
-    return img, {'label': label}
+    return img, {"label": label}
+
 
 # vim: ts=4 sw=4 sts=4 expandtab

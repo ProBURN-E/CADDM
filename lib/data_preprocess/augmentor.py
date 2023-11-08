@@ -10,12 +10,17 @@ from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage.interpolation import map_coordinates
 
 from .utils.jpegpy import jpeg_decode, jpeg_encode
-from .utils.image_process import resize_rand_interp, adjust_gamma, \
-    adjust_tone, linear_motion_blur, gaussian_noise
+from .utils.image_process import (
+    resize_rand_interp,
+    adjust_gamma,
+    adjust_tone,
+    linear_motion_blur,
+    gaussian_noise,
+)
 
 
 def rand_range(rng, lo, hi):
-    return rng.rand()*(hi-lo)+lo
+    return rng.rand() * (hi - lo) + lo
 
 
 def add_noise(rng, img):
@@ -30,35 +35,31 @@ def add_noise(rng, img):
         img = (img - img.min()) / (img.max() - img.min() + 1) * 255
 
     # quantization noise
-    if rng.rand() > .5:
+    if rng.rand() > 0.5:
         ih, iw = img.shape[:2]
-        noise = rng.randn(ih//4, iw//4) * 2
+        noise = rng.randn(ih // 4, iw // 4) * 2
         noise = cv2.resize(noise, (iw, ih))
         img = np.clip(img + noise[:, :, np.newaxis], 0, 255)
 
     # apply HSV augmentor
     if rng.rand() > 0.75:
-        img = np.array(img, 'uint8')
+        img = np.array(img, "uint8")
         hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
         if rng.rand() > 0.5:
             if rng.rand() > 0.5:
-                r = 1. - 0.5 * rng.rand()
+                r = 1.0 - 0.5 * rng.rand()
             else:
-                r = 1. + 0.15 * rng.rand()
-            hsv_img[:, :, 1] = np.array(
-                np.clip(hsv_img[:, :, 1] * r, 0, 255), 'uint8'
-            )
+                r = 1.0 + 0.15 * rng.rand()
+            hsv_img[:, :, 1] = np.array(np.clip(hsv_img[:, :, 1] * r, 0, 255), "uint8")
 
         if rng.rand() > 0.5:
             # brightness
             if rng.rand() > 0.5:
-                r = 1. + rng.rand()
+                r = 1.0 + rng.rand()
             else:
-                r = 1. - 0.5 * rng.rand()
-            hsv_img[:, :, 2] = np.array(
-                np.clip(hsv_img[:, :, 2] * r, 0, 255), 'uint8'
-            )
+                r = 1.0 - 0.5 * rng.rand()
+            hsv_img[:, :, 2] = np.array(np.clip(hsv_img[:, :, 2] * r, 0, 255), "uint8")
 
         img = cv2.cvtColor(hsv_img, cv2.COLOR_HSV2BGR)
 
@@ -81,7 +82,7 @@ def add_noise(rng, img):
     if rng.rand() > 0.7:
         # append color tone adjustment
         rand_color = tuple([60 + 195 * rng.rand() for _ in range(3)])
-        img = adjust_tone(img, rand_color, rng.rand()*0.3)
+        img = adjust_tone(img, rand_color, rng.rand() * 0.3)
 
     # apply interpolation
     x, y = img.shape[:2]
@@ -91,13 +92,10 @@ def add_noise(rng, img):
         resize_rand_interp(rng, img, target_shape)
         resize_rand_interp(rng, img, (x, y))
 
-    return np.array(img, 'uint8')
+    return np.array(img, "uint8")
 
 
-def elastic_transform(
-        image, alpha, sigma, alpha_affine, random_state=None
-):
-
+def elastic_transform(image, alpha, sigma, alpha_affine, random_state=None):
     if random_state is None:
         random_state = np.random.RandomState(None)
 
@@ -113,7 +111,8 @@ def elastic_transform(
         x, y = np.meshgrid(np.arange(shape[1]), np.arange(shape[0]))
         indices = np.reshape(y + dy, (-1, 1)), np.reshape(x + dx, (-1, 1))
         imageC[:, :, i] = map_coordinates(
-            imageB[:, :, i], indices, order=1, mode='constant').reshape(shape)
+            imageB[:, :, i], indices, order=1, mode="constant"
+        ).reshape(shape)
 
     return imageC
 
@@ -129,34 +128,34 @@ def image_h_mirror(image, bboxes=None):
 
     for bbox in bboxes:
         x_min, y_min, x_max, y_max = bbox
-        mirror_bboxes.append([width-x_max, y_min, width-x_min, y_max])
+        mirror_bboxes.append([width - x_max, y_min, width - x_min, y_max])
     return image, bboxes
 
 
 def resize_aug(images, landmark=None):
-
     resize_images = list()
     resize_ratio = 2
 
     for img in images:
         rh, rw = img.shape[:2]
-        resize_images.append(cv2.resize(
-            img, (rw//resize_ratio, rh//resize_ratio),
-            interpolation=cv2.INTER_LINEAR
-        ))
+        resize_images.append(
+            cv2.resize(
+                img,
+                (rw // resize_ratio, rh // resize_ratio),
+                interpolation=cv2.INTER_LINEAR,
+            )
+        )
 
     if landmark is None:
         return resize_images, None
 
     for i in range(len(landmark)):
-        landmark[i] = [
-            landmark[i][0]/resize_ratio, landmark[i][1]/resize_ratio
-        ]
+        landmark[i] = [landmark[i][0] / resize_ratio, landmark[i][1] / resize_ratio]
 
     return resize_images, landmark
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass
 
 # vim: ts=4 sw=4 sts=4 expandtab

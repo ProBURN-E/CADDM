@@ -4,10 +4,15 @@ import yaml
 import torch.utils.data as data
 from sklearn.metrics import roc_auc_score
 
+try:
+    from yaml import CLoader as Loader, CDumper as Dumper
+except ImportError:
+    from yaml import Loader, Dumper
+
 
 def load_config(config_file):
-    with open(config_file, 'r') as f:
-        config = yaml.load(f)
+    with open(config_file, "r") as f:
+        config = yaml.load(f, Loader=Loader)
     return config
 
 
@@ -41,8 +46,8 @@ def get_video_auc(f_label_list, v_name_list, f_pred_list):
             video_res_dict[video]["scores"].append(score)
     # get the score and label for each video
     for video, res in video_res_dict.items():
-        score = sum(res['scores']) / len(res['scores'])
-        label = res['label']
+        score = sum(res["scores"]) / len(res["scores"])
+        label = res["label"]
         video_pred_list.append(score)
         video_label_list.append(label)
 

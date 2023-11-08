@@ -1,0 +1,7 @@
+test_images/*
+train_images
+checkpoints/*
+__pycache__
+.mypy_cache
+.history
+.vscode

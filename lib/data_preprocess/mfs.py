@@ -122,7 +122,7 @@ def multi_scale_facial_swap(
     assert min(sliding_win) > 0
     assert blending_type == 'poisson' or blending_type == 'alpha'
 
-    bbox = [[0, 0, 224, 224]]
+    bbox = [[0, 0, 224, 224]] 
 
     if srcRgb.shape != targetRgb.shape:
         h, w = targetRgb.shape[:2]
