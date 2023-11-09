@@ -22,7 +22,7 @@ def args_func():
         "--cfg",
         type=str,
         help="The path to the config.",
-        default="./configs/caddm_train.cfg",
+        default="configs/caddm_train_ff++_sr_light_x2.cfg",
     )
     parser.add_argument(
         "--ckpt", type=str, help="The checkpoint of the pretrained model.", default=None
@@ -120,10 +120,13 @@ def train():
         collate_fn=my_collate,
     )
 
+    print("Start training...")
     # start trining.
     net.train()
     for epoch in trange(base_epoch, cfg["train"]["epoch_num"]):
         for index, (batch_data, batch_labels) in enumerate(train_loader):
+            print(index)
+            tqdm.set_description(f"epoch: {epoch}, iter: {index}")
             lr = update_learning_rate(epoch)
             for param_group in optimizer.param_groups:
                 param_group["lr"] = lr

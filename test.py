@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 import argparse
-from collections import OrderedDict
-from sklearn.metrics import roc_auc_score
 import os
+from collections import OrderedDict
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from sklearn.metrics import roc_auc_score
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 import model
-from detection_layers.modules import MultiBoxLoss
 from dataset import DeepfakeDataset
-from lib.util import load_config, update_learning_rate, my_collate, get_video_auc
+from detection_layers.modules import MultiBoxLoss
+from lib.util import get_video_auc, load_config, my_collate, update_learning_rate
 
 
 def args_func():
@@ -22,7 +23,7 @@ def args_func():
         "--cfg",
         type=str,
         help="The path to the config.",
-        default="./configs/caddm_test.cfg",
+        default="configs/caddm_test_ff++_sr_light_x2.cfg",
     )
     args = parser.parse_args()
     return args
@@ -47,9 +48,9 @@ def test():
 
     # init model.
     net = model.get(backbone=cfg["model"]["backbone"])
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
     net = net.to(device)
-    net = nn.DataParallel(net)
+    net = nn.DataParallel(net, device_ids=[2])
     net.eval()
     if cfg["model"]["ckpt"]:
         net = load_checkpoint(cfg["model"]["ckpt"], net, device)
@@ -69,7 +70,7 @@ def test():
     frame_label_list = list()
     video_name_list = list()
 
-    for batch_data, batch_labels in test_loader:
+    for batch_data, batch_labels in tqdm(test_loader):
         labels, video_name = batch_labels
         labels = labels.long()
 
